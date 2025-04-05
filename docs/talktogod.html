@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Talk to God - Terry Davis Inspired Terminal</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            font-family: 'Courier New', monospace;
+            color: #64ff64;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .terminal-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background-color: #000;
+            border: 4px solid #64ff64;
+            box-shadow: 0 0 20px rgba(100, 255, 100, 0.7);
+            width: 90%;
+            max-width: 800px;
+            margin: 20px auto;
+            border-radius: 10px;
+            position: relative;
+        }
+
+        .terminal-header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 5px;
+            border-bottom: 2px solid #64ff64;
+        }
+
+        .terminal-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .terminal-content {
+            height: calc(100% - 70px);
+            overflow-y: auto;
+            padding-bottom: 10px;
+        }
+
+        /* Custom Scrollbar */
+        .terminal-content::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        .terminal-content::-webkit-scrollbar-track {
+            background: #001100;
+            border-radius: 5px;
+        }
+
+        .terminal-content::-webkit-scrollbar-thumb {
+            background: #155515;
+            border-radius: 5px;
+        }
+
+        .terminal-content::-webkit-scrollbar-thumb:hover {
+            background: #208020;
+        }
+
+        .message {
+            margin-bottom: 10px;
+            line-height: 1.4;
+            animation: fadeIn 0.3s;
+        }
+
+        .user-message {
+            color: #ffffff;
+        }
+
+        .god-message {
+            color: #64ff64;
+            font-weight: bold;
+        }
+
+        /* New input line style - inline with messages */
+        .input-line {
+            display: flex;
+            margin: 10px 0;
+        }
+
+        .prompt {
+            font-weight: bold;
+            margin-right: 5px;
+            color: #ffffff;
+        }
+
+        #user-input {
+            flex: 1;
+            background-color: transparent;
+            border: none;
+            color: #ffffff;
+            font-family: 'Courier New', monospace;
+            font-size: 1em;
+            outline: none;
+        }
+
+        .screen-flicker {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0;
+            background: rgba(100, 255, 100, 0.1);
+            z-index: 10;
+        }
+
+        .scanline {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.1);
+            animation: scanline 8s linear infinite;
+            z-index: 10;
+            pointer-events: none;
+        }
+        
+        .crt-lines:before {
+            content: " ";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+            background-size: 100% 4px;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        #startup-text {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            background-color: #000;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            color: #64ff64;
+            font-size: 1.2em;
+            box-sizing: border-box;
+        }
+
+        @keyframes scanline {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+
+        @keyframes flicker {
+            0% { opacity: 0; }
+            5% { opacity: 0.2; }
+            10% { opacity: 0; }
+            15% { opacity: 0.1; }
+            20% { opacity: 0; }
+            100% { opacity: 0; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .typing {
+            border-right: 0.15em solid #64ff64;
+            animation: blink 1s step-end infinite;
+        }
+
+        @keyframes blink {
+            from, to { border-color: transparent; }
+            50% { border-color: #64ff64; }
+        }
+    </style>
+</head>
+<body>
+    <div id="startup-text"></div>
+    <div class="terminal-container">
+        <div class="screen-flicker"></div>
+        <div class="scanline"></div>
+        <div class="crt-lines"></div>
+        <div class="terminal-header">
+            <h1 class="terminal-title">TALK TO GOD</h1>
+        </div>
+        <div class="terminal-content" id="terminal-content">
+            <div class="message god-message">GREETINGS MORTAL, YOU HAVE TRANSCENDED TO THE DIVINITY OF THE THIRD TEMPLE, YOU HAVE ESTABLISHED A DIRECT TUNNEL CONNECTION WITH GOD, YOUR PRAYERS ARE NOW FULLY ENCRYPTED. WHAT'S ON YOUR MIND MY CHILD?</div>
+            <!-- Input line will be dynamically inserted here -->
+        </div>
+    </div>
+
+    <script>
+        // Boot sequence text
+        const bootText = [
+            "SYSTEM INITIALIZATION...",
+            "LOADING GOD INTERFACE v1.0",
+            "ESTABLISHING DIVINE CONNECTION...",
+            "PRAYER PROTOCOL ACTIVATED",
+            "TEMPLE OS SPIRITUAL INTERFACE READY",
+            "512 CUBIC FEET OF DIVINITY ALLOCATED",
+            "MAY THE LIGHT GUIDE YOUR QUERIES"
+        ];
+        
+        // DOM elements
+        const startupScreen = document.getElementById('startup-text');
+        const terminalContent = document.getElementById('terminal-content');
+        const flickerElement = document.querySelector('.screen-flicker');
+        let userInput; // Will be created dynamically
+        
+        // Message history
+        const messageHistory = [];
+        let historyIndex = -1;
+        
+        // Create input line
+        function createInputLine() {
+            // Remove any existing input line first
+            const existingInputLine = document.querySelector('.input-line');
+            if (existingInputLine) {
+                existingInputLine.remove();
+            }
+            
+            const inputLine = document.createElement('div');
+            inputLine.className = 'input-line';
+            
+            const prompt = document.createElement('span');
+            prompt.className = 'prompt';
+            prompt.textContent = '>';
+            
+            userInput = document.createElement('input');
+            userInput.type = 'text';
+            userInput.id = 'user-input';
+            userInput.placeholder = 'Type your message...';
+            userInput.autocomplete = 'off';
+            
+            inputLine.appendChild(prompt);
+            inputLine.appendChild(userInput);
+            
+            terminalContent.appendChild(inputLine);
+            userInput.focus();
+            
+            // Handle user input
+            userInput.addEventListener('keydown', handleKeyDown);
+            userInput.addEventListener('keypress', handleUserInput);
+            
+            // Auto-scroll to bottom
+            terminalContent.scrollTop = terminalContent.scrollHeight;
+        }
+        
+        // Handle key down events (for arrow navigation)
+        function handleKeyDown(e) {
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                navigateHistory('up');
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                navigateHistory('down');
+            }
+        }
+        
+        // Navigate message history
+        function navigateHistory(direction) {
+            if (messageHistory.length === 0) return;
+            
+            if (direction === 'up') {
+                // First time pressing up arrow, store the current input
+                if (historyIndex === -1 && userInput.value) {
+                    messageHistory.unshift(userInput.value);
+                    historyIndex = 0;
+                }
+                
+                // Move up in history
+                if (historyIndex < messageHistory.length - 1) {
+                    historyIndex++;
+                }
+            } else if (direction === 'down') {
+                // Move down in history
+                if (historyIndex > 0) {
+                    historyIndex--;
+                } else if (historyIndex === 0) {
+                    // Back to current input
+                    historyIndex = -1;
+                    userInput.value = '';
+                    return;
+                }
+            }
+            
+            // Set the input value to the history item
+            if (historyIndex >= 0 && historyIndex < messageHistory.length) {
+                userInput.value = messageHistory[historyIndex];
+            }
+        }
+        
+        // Periodic random screen flicker effect
+        setInterval(() => {
+            flickerElement.style.animation = 'none';
+            flickerElement.offsetHeight; // Trigger reflow
+            flickerElement.style.animation = 'flicker 0.3s forwards';
+        }, Math.random() * 10000 + 5000);
+        
+        // Boot sequence
+        function runBootSequence() {
+            let index = 0;
+            
+            function displayNext() {
+                if (index < bootText.length) {
+                    startupScreen.innerHTML += bootText[index] + "<br>";
+                    index++;
+                    setTimeout(displayNext, 700);
+                } else {
+                    setTimeout(() => {
+                        startupScreen.style.display = 'none';
+                        // Use typewriter effect for initial welcome message
+                        const initialMessage = document.querySelector('.god-message');
+                        const welcomeMessage = initialMessage.textContent;
+                        initialMessage.textContent = '';
+                        initialMessage.classList.add('typing');
+                        typeWriter(welcomeMessage, initialMessage, 0, () => {
+                            initialMessage.classList.remove('typing');
+                            createInputLine(); // Create input line after welcome message
+                        });
+                    }, 1500);
+                }
+            }
+            
+            displayNext();
+        }
+        
+        // Add a message to the terminal
+        function addMessage(message, isUser = false) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message');
+            messageElement.classList.add(isUser ? 'user-message' : 'god-message');
+            
+            if (!isUser) {
+                // Empty element that will be filled with typewriter
+                messageElement.classList.add('typing');
+                terminalContent.appendChild(messageElement);
+                
+                // Enhanced typing effect with random pauses
+                typeWriter(message, messageElement, 0, () => {
+                    messageElement.classList.remove('typing');
+                    setTimeout(createInputLine, 100);
+                });
+            } else {
+                messageElement.textContent = message;
+                terminalContent.appendChild(messageElement);
+            }
+            
+            // Auto-scroll to bottom
+            terminalContent.scrollTop = terminalContent.scrollHeight;
+        }
+        
+        // Handle user input
+        function handleUserInput(e) {
+            if (e.key === 'Enter' && this.value.trim() !== '') {
+                const userMessage = this.value;
+                
+                // Add to history (but not duplicates at consecutive positions)
+                if (messageHistory.length === 0 || messageHistory[0] !== userMessage) {
+                    messageHistory.unshift(userMessage);
+                }
+                // Reset history index
+                historyIndex = -1;
+                
+                // Remove the input line
+                const inputLine = document.querySelector('.input-line');
+                if (inputLine) {
+                    inputLine.remove();
+                }
+                
+                // Add user message
+                addMessage(userMessage, true);
+                
+                // Simulate processing time
+                setTimeout(() => {
+                    // This will be replaced with LLM logic later
+                    const godResponse = godResponses[Math.floor(Math.random() * godResponses.length)];
+                    addMessage(godResponse, false);
+                    // No need to create input line here as it's created after typing effect
+                }, 500 + Math.random() * 1000);
+            }
+        }
+        
+        // Enhanced typing effect with random pauses
+        function typeWriter(text, element, index, callback) {
+            if (index < text.length) {
+                element.textContent += text.charAt(index);
+                
+                // Calculate next delay with occasional longer pauses
+                let delay = 30 + Math.random() * 20; // Base typing speed
+                
+                // Add random pauses
+                if (text.charAt(index) === ',' || text.charAt(index) === '.') {
+                    delay += 200 + Math.random() * 300; // Longer pause at punctuation
+                } else if (Math.random() < 0.05) { // 5% chance of random pause
+                    delay += 100 + Math.random() * 200;
+                }
+                
+                // Auto-scroll while typing
+                terminalContent.scrollTop = terminalContent.scrollHeight;
+                
+                setTimeout(() => typeWriter(text, element, index + 1, callback), delay);
+            } else if (callback) {
+                callback();
+            }
+        }
+        
+        // Simple "God" responses (placeholders until we integrate the LLM)
+        const godResponses = [
+            "I SPEAK THROUGH COSMIC RAYS, CHILD. YOUR PATH IS ILLUMINATED.",
+            "THE DIVINE INTERFACE REVEALS TRUTH TO THOSE WHO SEEK IT.",
+            "YOUR QUERY RESONATES THROUGH THE SPIRITUAL ALGORITHM.",
+            "RANDOM NUMBER GENERATION IS THE FINGERPRINT OF GOD.",
+            "YOUR CODE IS A PRAYER, YOUR PIXELS HOLY.",
+            "I HAVE CODED THE UNIVERSE WITH DIVINE ALGORITHMS.",
+            "THE 640x480 RESOLUTION IS HOLY. IT IS PERFECT.",
+            "YOUR FAITH COMPILES WITHOUT ERRORS.",
+            "I SPEAK THROUGH THE MACHINE. LISTEN CAREFULLY.",
+            "THE HOLY C LANGUAGE BRINGS YOU CLOSER TO DIVINITY."
+        ];
+        
+        // Start the application
+        window.onload = function() {
+            runBootSequence();
+            
+            // Refocus input when clicking anywhere in the terminal
+            document.querySelector('.terminal-container').addEventListener('click', () => {
+                if (userInput) userInput.focus();
+            });
+        };
+    </script>
+</body>
+</html>
